@@ -11,7 +11,8 @@ import {
   Calendar, 
   Sparkles, 
   Info,
-  PhoneCall
+  PhoneCall,
+  Phone
 } from 'lucide-react';
 
 export default function Dashboard({ token, user, onLogout }) {
@@ -264,8 +265,11 @@ export default function Dashboard({ token, user, onLogout }) {
       {/* Header welcome bar */}
       <div style={styles.welcomeBar} className="glass-panel">
         <div>
-          <h2 style={styles.welcomeText}>Hello, {user.name} 👋</h2>
-          <p style={styles.phoneText}>📱 Phone: {user.phone}</p>
+          <h2 style={styles.welcomeText}>Hello, {user.name}</h2>
+          <p style={styles.phoneText}>
+            <Phone size={14} style={{ marginRight: '6px', verticalAlign: 'middle', opacity: 0.8 }} />
+            {user.phone}
+          </p>
         </div>
         <button onClick={onLogout} style={styles.logoutButton}>
           <LogOut size={16} />
@@ -293,13 +297,13 @@ export default function Dashboard({ token, user, onLogout }) {
 
       {error && (
         <div style={styles.errorAlert} className="animate-shake">
-          <span>⚠️ {error}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><AlertTriangle size={16} /> {error}</span>
         </div>
       )}
 
       {successMsg && (
         <div style={styles.successAlert}>
-          <span>💡 {successMsg}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Info size={16} /> {successMsg}</span>
         </div>
       )}
 
@@ -322,39 +326,7 @@ export default function Dashboard({ token, user, onLogout }) {
             )}
           </div>
 
-          {/* Quick Add Form on Today's Checklist */}
-          <div style={styles.quickAddRow}>
-            {showTodayAddForm ? (
-              <form onSubmit={handleQuickAdd} style={styles.quickAddForm} className="animate-fade-in">
-                <input 
-                  type="text" 
-                  placeholder="Task title (e.g., Meditate)" 
-                  value={quickTitle}
-                  onChange={(e) => setQuickTitle(e.target.value)}
-                  required
-                  style={styles.quickInputText}
-                />
-                <input 
-                  type="time" 
-                  value={quickTime}
-                  onChange={(e) => setQuickTime(e.target.value)}
-                  required
-                  style={styles.quickInputTime}
-                />
-                <button type="submit" disabled={loading} style={styles.quickAddSaveBtn}>
-                  Add Task
-                </button>
-                <button type="button" onClick={() => setShowTodayAddForm(false)} style={styles.quickAddCancelBtn}>
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <button onClick={() => setShowTodayAddForm(true)} style={styles.quickAddTriggerBtn}>
-                <Plus size={14} />
-                <span>Add Task to Today's Checklist</span>
-              </button>
-            )}
-          </div>
+
 
           {tracks.length === 0 ? (
             <div style={styles.emptyState}>
@@ -994,7 +966,7 @@ const styles = {
   errorAlert: {
     background: 'var(--accent-red-glow)',
     border: '1px solid var(--accent-red)',
-    color: '#f87171',
+    color: 'var(--accent-red)',
     padding: '12px 20px',
     borderRadius: '10px',
     fontSize: '13px',

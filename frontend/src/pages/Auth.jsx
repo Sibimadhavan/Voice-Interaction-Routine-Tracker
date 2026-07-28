@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Phone, User, ShieldCheck, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { Phone, User, ShieldCheck, ArrowRight, Loader2, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 
 export default function Auth({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -192,14 +192,16 @@ export default function Auth({ onLoginSuccess }) {
     <div style={styles.container} className="animate-fade-in">
       <div style={styles.card} className="glass-panel">
         <div style={styles.header}>
-          <div style={styles.logoContainer}>⏰</div>
+          <div style={styles.logoIconContainer}>
+            <Clock size={40} style={{ color: 'var(--primary)' }} />
+          </div>
           <h1 style={styles.title} className="text-gradient">HabitLoop</h1>
           <p style={styles.subtitle}>Daily Routine Tracker with Outbound Reminders</p>
         </div>
 
         {error && (
           <div style={styles.errorAlert} className="animate-shake">
-            <span>⚠️ {error}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><AlertTriangle size={16} /> {error}</span>
           </div>
         )}
 
@@ -277,7 +279,9 @@ export default function Auth({ onLoginSuccess }) {
         {step === 'name' && (
           <div>
             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={styles.successIcon}>✓</div>
+              <div style={styles.logoIconContainer}>
+                <ShieldCheck size={48} style={{ color: 'var(--accent-green)' }} />
+              </div>
               <h2 style={styles.callingTitle}>Number Verified!</h2>
               <p style={styles.callingDesc}>Complete your profile to create your HabitLoop account.</p>
             </div>
@@ -326,9 +330,10 @@ const styles = {
     textAlign: 'center',
     marginBottom: '30px',
   },
-  logoContainer: {
-    fontSize: '48px',
-    marginBottom: '10px',
+  logoIconContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '16px',
   },
   title: {
     fontSize: '28px',
@@ -360,7 +365,7 @@ const styles = {
   activeTab: {
     background: 'var(--bg-primary)',
     color: 'var(--text-primary)',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
   },
   inputGroup: {
     marginBottom: '20px',
@@ -421,7 +426,7 @@ const styles = {
   errorAlert: {
     background: 'var(--accent-red-glow)',
     border: '1px solid var(--accent-red)',
-    color: '#f87171',
+    color: 'var(--accent-red)',
     padding: '12px',
     borderRadius: '10px',
     marginBottom: '20px',

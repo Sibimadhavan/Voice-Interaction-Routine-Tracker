@@ -66,7 +66,7 @@ export default function History({ token }) {
 
       {error && (
         <div style={styles.errorAlert} className="animate-shake">
-          <span>⚠️ {error}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><AlertTriangle size={16} /> {error}</span>
         </div>
       )}
 
@@ -340,7 +340,7 @@ const styles = {
   errorAlert: {
     background: 'var(--accent-red-glow)',
     border: '1px solid var(--accent-red)',
-    color: '#f87171',
+    color: 'var(--accent-red)',
     padding: '12px 20px',
     borderRadius: '10px',
     fontSize: '13px',
