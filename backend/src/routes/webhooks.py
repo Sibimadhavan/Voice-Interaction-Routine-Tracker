@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 import urllib.parse
 from src.services.db import db_service
+from src.config.settings import settings
 
 router = APIRouter(prefix="/webhooks/twilio", tags=["twilio-webhooks"])
 
@@ -20,7 +21,7 @@ async def twilio_verification_call(phone: str):
     Prompts the user to enter the digit displayed on the screen.
     """
     encoded_phone = urllib.parse.quote(phone)
-    action_url = f"/api/webhooks/twilio/verify-digit?phone={encoded_phone}"
+    action_url = f"{settings.public_url.rstrip('/')}/api/webhooks/twilio/verify-digit?phone={encoded_phone}"
     
     xml = f"""
     <Gather numDigits="1" action="{action_url}" timeout="8" method="POST">
@@ -40,6 +41,14 @@ async def twilio_verify_digit(
     TwiML webhook to verify the user-pressed digit.
     Saves success state to Redis.
     """
+    # Normalize phone number (handle URL decode space issues where '+' becomes ' ')
+    phone = phone.strip()
+    if not phone.startswith("+"):
+        if phone.startswith(" "):
+            phone = "+" + phone.lstrip()
+        else:
+            phone = "+" + phone
+            
     otp_key = f"otp:{phone}"
     stored_digit = await db_service.redis_client.get(otp_key)
     
@@ -83,7 +92,7 @@ async def twilio_reminder_call(trackId: str):
         return twiml_response(xml)
         
     title = track["title"]
-    action_url = f"/api/webhooks/twilio/verify-reminder?trackId={trackId}"
+    action_url = f"{settings.public_url.rstrip('/')}/api/webhooks/twilio/verify-reminder?trackId={trackId}"
     
     xml = f"""
     <Gather numDigits="1" action="{action_url}" timeout="8" method="POST">
