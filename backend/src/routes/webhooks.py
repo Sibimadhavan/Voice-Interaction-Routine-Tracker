@@ -24,10 +24,10 @@ async def twilio_verification_call(phone: str):
     action_url = f"{settings.public_url.rstrip('/')}/api/webhooks/twilio/verify-digit?phone={encoded_phone}"
     
     xml = f"""
-    <Gather numDigits="1" action="{action_url}" timeout="8" method="POST">
-        <Say voice="alice">Please enter the single digit displayed on your screen to complete verification.</Say>
+    <Gather numDigits="1" action="{action_url}" timeout="5" method="POST">
+        <Say voice="alice">Please press the key showing on your screen.</Say>
     </Gather>
-    <Say voice="alice">We did not receive any input. Goodbye.</Say>
+    <Say voice="alice">No input received. Goodbye.</Say>
     <Hangup/>
     """
     return twiml_response(xml)
@@ -95,10 +95,10 @@ async def twilio_reminder_call(trackId: str):
     action_url = f"{settings.public_url.rstrip('/')}/api/webhooks/twilio/verify-reminder?trackId={trackId}"
     
     xml = f"""
-    <Gather numDigits="1" action="{action_url}" timeout="8" method="POST">
-        <Say voice="alice">This is a reminder for your routine: {title}. Press 1 if completed. Press 0 if not completed. Press 2 to complete later.</Say>
+    <Gather numDigits="1" action="{action_url}" timeout="5" method="POST">
+        <Say voice="alice">Reminder for your routine, {title}. Press 1 if the routine is completed. Press 0 if the routine is not completed. Press 2 if the routine will be completed later.</Say>
     </Gather>
-    <Say voice="alice">We did not receive any input. Goodbye.</Say>
+    <Say voice="alice">No input received. Goodbye.</Say>
     <Hangup/>
     """
     return twiml_response(xml)
