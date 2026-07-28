@@ -1,63 +1,59 @@
 version: '3.8'
 
 services:
-  # MongoDB Database
   mongodb:
-    image: mongo:latest
-    container_name: routine_mongodb
-    restart: always
+    image: mongo:6.0
+    container_name: routine_tracker_mongodb
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
 
-  # Redis Cache
   redis:
-    image: redis:alpine
-    container_name: routine_redis
-    restart: always
+    image: redis:7.0-alpine
+    container_name: routine_tracker_redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
 
-  # FastAPI Backend
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: routine_backend
-    restart: always
+    build: ./backend
+    container_name: routine_tracker_backend
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - MONGO_URL=mongodb://mongodb:27017/routine_tracker_db
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=super_secret_jwt_key_123_abc
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
-      - TWIML_WEBHOOK_URL=${TWIML_WEBHOOK_URL}
+      - MONGODB_URL=mongodb://mongodb:27017/routine_tracker
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - mongodb
       - redis
     volumes:
       - ./backend:/app
 
-  # React Frontend
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: routine_frontend
-    restart: always
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
+    build: ./frontend
+    container_name: routine_tracker_frontend
+    env_file:
+      - .env
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: routine_tracker_nginx
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
 
 volumes:
   mongodb_data:

@@ -1,9 +1,30 @@
+# Node dependencies
 node_modules/
-.env
-__pycache__/
-*.pyc
-.DS_Store
 dist/
 build/
-.vscode/
+.npm
+.eslintcache
+
+# Python environment & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+env/
+venv/
+
+# Environment files and keys
+.env
+.env*.local
+
+# System/IDE files
+.DS_Store
 .idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
