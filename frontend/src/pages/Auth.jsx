@@ -267,13 +267,6 @@ export default function Auth({ onLoginSuccess }) {
               <span style={styles.statusText}>{statusMessage}</span>
             </div>
 
-            <div style={styles.devTools}>
-              <p style={styles.devToolsTitle}>🛠️ Developer Sandbox Fallback</p>
-              <button onClick={triggerDeveloperMock} style={styles.devButton}>
-                Simulate Call Keypress ({digit})
-              </button>
-            </div>
-
             <button onClick={resetFlow} style={styles.secondaryButton}>
               <RefreshCw size={14} />
               <span>Restart Process</span>
