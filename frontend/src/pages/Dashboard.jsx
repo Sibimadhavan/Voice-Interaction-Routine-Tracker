@@ -21,8 +21,7 @@ export default function Dashboard({ token, user, onLogout }) {
   
   // Forms state
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newTime, setNewTime] = useState('08:00');
+  const [newTasks, setNewTasks] = useState([{ title: '', time: '08:00' }]);
   const [editingTemplate, setEditingTemplate] = useState(null); // template object
   const [editTitle, setEditTitle] = useState('');
   const [editTime, setEditTime] = useState('');
@@ -112,35 +111,55 @@ export default function Dashboard({ token, user, onLogout }) {
 
   const handleAddTemplate = async (e) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newTime) return;
+    if (newTasks.some(t => !t.title.trim() || !t.time)) return;
     setLoading(true);
     setError('');
     
     try {
-      const response = await fetch('/api/routines', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ title: newTitle.trim(), time: newTime })
-      });
-      
-      const result = await response.json();
-      if (response.ok) {
-        setTemplates([...templates, result.data]);
-        setNewTitle('');
-        setShowAddForm(false);
-        setSuccessMsg('Routine template created! It will take effect tomorrow.');
-        setTimeout(() => setSuccessMsg(''), 5000);
-      } else {
-        setError(result.detail || 'Failed to create routine template.');
+      const createdTemplates = [];
+      for (const task of newTasks) {
+        const response = await fetch('/api/routines', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ title: task.title.trim(), time: task.time })
+        });
+        
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.detail || 'Failed to create one of the routine templates.');
+        }
+        createdTemplates.push(result.data);
       }
+      
+      setTemplates([...templates, ...createdTemplates]);
+      await fetchTodayTracks();
+      
+      setNewTasks([{ title: '', time: '08:00' }]);
+      setShowAddForm(false);
+      setSuccessMsg(`${newTasks.length} routine patterns created successfully!`);
+      setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err) {
-      setError('Connection error.');
+      setError(err.message || 'Connection error.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTaskFieldChange = (index, field, value) => {
+    const updated = [...newTasks];
+    updated[index][field] = value;
+    setNewTasks(updated);
+  };
+
+  const handleAddTaskRow = () => {
+    setNewTasks([...newTasks, { title: '', time: '08:00' }]);
+  };
+
+  const handleRemoveTaskRow = (index) => {
+    setNewTasks(newTasks.filter((_, idx) => idx !== index));
   };
 
   const handleQuickAdd = async (e) => {
@@ -452,36 +471,59 @@ export default function Dashboard({ token, user, onLogout }) {
           {/* Add Form */}
           {showAddForm && (
             <form onSubmit={handleAddTemplate} style={styles.formCard} className="animate-fade-in">
-              <h4 style={styles.formTitle}>Add New Habit Pattern</h4>
-              <div style={styles.formGrid}>
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Routine Title</label>
-                  <input 
-                    type="text" 
-                    placeholder="E.g. Yoga, Morning Walk, Read paper"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    required
-                    style={styles.formInput}
-                  />
+              <h4 style={styles.formTitle}>Add New Habit Patterns</h4>
+              
+              {newTasks.map((task, index) => (
+                <div key={index} style={styles.multiTaskRow}>
+                  <div style={styles.formGroupTitle}>
+                    <label style={styles.formLabel}>Routine Title</label>
+                    <input 
+                      type="text" 
+                      placeholder="E.g. Yoga, Morning Walk, Read paper"
+                      value={task.title}
+                      onChange={(e) => handleTaskFieldChange(index, 'title', e.target.value)}
+                      required
+                      style={styles.formInput}
+                    />
+                  </div>
+                  <div style={styles.formGroupTime}>
+                    <label style={styles.formLabel}>Scheduled Time (24h)</label>
+                    <input 
+                      type="time" 
+                      value={task.time}
+                      onChange={(e) => handleTaskFieldChange(index, 'time', e.target.value)}
+                      required
+                      style={styles.formInput}
+                    />
+                  </div>
+                  {newTasks.length > 1 && (
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveTaskRow(index)} 
+                      style={styles.removeTaskRowBtn}
+                      title="Remove Row"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Scheduled Time (24h)</label>
-                  <input 
-                    type="time" 
-                    value={newTime}
-                    onChange={(e) => setNewTime(e.target.value)}
-                    required
-                    style={styles.formInput}
-                  />
-                </div>
-              </div>
+              ))}
+
+              <button type="button" onClick={handleAddTaskRow} style={styles.addTaskRowBtn}>
+                <Plus size={12} />
+                <span>Add Another Task</span>
+              </button>
+
               <div style={styles.formActions}>
-                <button type="button" onClick={() => setShowAddForm(false)} style={styles.cancelButton}>
+                <button 
+                  type="button" 
+                  onClick={() => { setShowAddForm(false); setNewTasks([{ title: '', time: '08:00' }]); }} 
+                  style={styles.cancelButton}
+                >
                   Cancel
                 </button>
                 <button type="submit" disabled={loading} style={styles.saveButton}>
-                  Create Pattern
+                  Create Patterns
                 </button>
               </div>
             </form>
@@ -1032,5 +1074,52 @@ const styles = {
     color: 'var(--text-secondary)',
     cursor: 'pointer',
     fontSize: '12px',
+  },
+  multiTaskRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    marginBottom: '14px',
+    width: '100%',
+  },
+  formGroupTitle: {
+    flex: 2,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  formGroupTime: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  removeTaskRowBtn: {
+    background: 'transparent',
+    border: '1px solid rgba(239, 68, 68, 0.4)',
+    color: '#ef4444',
+    borderRadius: '8px',
+    width: '36px',
+    height: '36px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    marginTop: '24px',
+  },
+  addTaskRowBtn: {
+    background: 'transparent',
+    border: '1px dashed var(--primary)',
+    color: 'var(--primary-hover)',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: '500',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    marginBottom: '18px',
+    marginTop: '4px',
   }
 };
