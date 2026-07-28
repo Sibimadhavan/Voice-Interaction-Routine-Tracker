@@ -27,6 +27,11 @@ export default function Dashboard({ token, user, onLogout }) {
   const [editTitle, setEditTitle] = useState('');
   const [editTime, setEditTime] = useState('');
   
+  // Today quick add states
+  const [showTodayAddForm, setShowTodayAddForm] = useState(false);
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickTime, setQuickTime] = useState('08:00');
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -130,6 +135,41 @@ export default function Dashboard({ token, user, onLogout }) {
         setTimeout(() => setSuccessMsg(''), 5000);
       } else {
         setError(result.detail || 'Failed to create routine template.');
+      }
+    } catch (err) {
+      setError('Connection error.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickAdd = async (e) => {
+    e.preventDefault();
+    if (!quickTitle.trim() || !quickTime) return;
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await fetch('/api/routines', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ title: quickTitle.trim(), time: quickTime })
+      });
+      
+      const result = await response.json();
+      if (response.ok) {
+        // Reload today's tracks and template list
+        await fetchTodayTracks();
+        await fetchTemplates();
+        setQuickTitle('');
+        setShowTodayAddForm(false);
+        setSuccessMsg('Task added successfully for today!');
+        setTimeout(() => setSuccessMsg(''), 5000);
+      } else {
+        setError(result.detail || 'Failed to add task.');
       }
     } catch (err) {
       setError('Connection error.');
@@ -260,6 +300,40 @@ export default function Dashboard({ token, user, onLogout }) {
                   <div style={{ ...styles.progressBarFill, width: `${progressPercent}%` }} />
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Quick Add Form on Today's Checklist */}
+          <div style={styles.quickAddRow}>
+            {showTodayAddForm ? (
+              <form onSubmit={handleQuickAdd} style={styles.quickAddForm} className="animate-fade-in">
+                <input 
+                  type="text" 
+                  placeholder="Task title (e.g., Meditate)" 
+                  value={quickTitle}
+                  onChange={(e) => setQuickTitle(e.target.value)}
+                  required
+                  style={styles.quickInputText}
+                />
+                <input 
+                  type="time" 
+                  value={quickTime}
+                  onChange={(e) => setQuickTime(e.target.value)}
+                  required
+                  style={styles.quickInputTime}
+                />
+                <button type="submit" disabled={loading} style={styles.quickAddSaveBtn}>
+                  Add Task
+                </button>
+                <button type="button" onClick={() => setShowTodayAddForm(false)} style={styles.quickAddCancelBtn}>
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <button onClick={() => setShowTodayAddForm(true)} style={styles.quickAddTriggerBtn}>
+                <Plus size={14} />
+                <span>Add Task to Today's Checklist</span>
+              </button>
             )}
           </div>
 
@@ -892,5 +966,71 @@ const styles = {
     borderRadius: '10px',
     fontSize: '13px',
     textAlign: 'left',
+  },
+  quickAddRow: {
+    marginBottom: '20px',
+    display: 'flex',
+    justifyContent: 'flex-start',
+  },
+  quickAddTriggerBtn: {
+    background: 'var(--bg-tertiary)',
+    border: '1px dashed var(--primary)',
+    color: 'var(--primary-hover)',
+    padding: '8px 14px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  quickAddForm: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    width: '100%',
+    background: 'var(--bg-secondary)',
+    padding: '12px',
+    borderRadius: '10px',
+    border: '1px solid var(--border-color)',
+  },
+  quickInputText: {
+    flexGrow: 1,
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
+    padding: '8px 12px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    outline: 'none',
+  },
+  quickInputTime: {
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
+    padding: '8px 12px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
+    outline: 'none',
+  },
+  quickAddSaveBtn: {
+    background: 'var(--primary)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 14px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  quickAddCancelBtn: {
+    background: 'transparent',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
+    padding: '8px 14px',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    fontSize: '12px',
   }
 };
