@@ -19,13 +19,13 @@ async def lifespan(app: FastAPI):
     # Startup lifecycle
     logger.info("Initializing application services...")
     await db_service.connect()
-    start_scheduler()
+    # start_scheduler()
     
     yield
     
     # Shutdown lifecycle
     logger.info("Shutting down application services...")
-    stop_scheduler()
+    # stop_scheduler()
     await db_service.disconnect()
 
 app = FastAPI(

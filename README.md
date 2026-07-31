@@ -1,62 +1,51 @@
-# HabitLoop - Phone Number Registration, Login & Daily Routine Tracking System
+# HabitLoop - Simplified Phone Authentication & Verification System
 
-HabitLoop is a daily routine checklist application built with a FastAPI backend, a React frontend, MongoDB for persistence, Redis for caching, and Twilio for phone-call verification (OTP) and scheduled routine reminder calls.
+HabitLoop is a secure passwordless registration and login application built with a FastAPI backend, React frontend, MongoDB for persistence, Redis for verification state caching/sessions, and Twilio for voice-call challenge OTP verification.
+
+All routine tracking and scheduler tasks have been disabled to focus purely on secure phone-call verification, welcoming authenticated users with a custom dashboard.
 
 ---
 
-## 1. Database Collections
+## 1. Database Collections & Schemas
 
-### Collection: `user`
+### MongoDB Collection: `user`
 Stores registered user profile data.
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | String (UUID) | Primary Key |
+| `id` | String (UUID v4) | Primary Key |
 | `phone` | String | Unique phone number in E.164 format |
 | `name` | String | Display name of the user |
 | `createdAt` | Date | Record creation timestamp |
 | `updatedAt` | Date | Record modification timestamp |
 
-### Collection: `routine`
-Stores daily routine template patterns.
+---
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | String (UUID) | Primary Key |
-| `userId` | String (UUID) | Reference to the owner User ID |
-| `title` | String | Label of the routine |
-| `time` | String | Scheduled time in 24h format (HH:MM) |
-| `isActive` | Boolean | Soft delete status flag |
-| `createdAt` | Date | Record creation timestamp |
-| `updatedAt` | Date | Record modification timestamp |
+### Redis Cache Keys
 
-### Collection: `daily_routine_track`
-Tracks checklist logs for individual days.
+#### Voice OTP Code
+* **Key**: `otp:<phone_number>`
+* **Value**: Generated single digit challenge code (`1-9`)
+* **TTL**: 300 seconds (5 minutes)
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | String (UUID) | Primary Key |
-| `userId` | String (UUID) | Reference to the owner User ID |
-| `routineId` | String (UUID) | Reference to the template Routine ID |
-| `date` | String | Target date in YYYY-MM-DD format |
-| `title` | String | Copied label of the routine |
-| `time` | String | Scheduled time (HH:MM) |
-| `status` | String | Status: `Pending`, `Completed`, `Will Complete Later` |
-| `statusUpdatedAt` | Date | Timestamp of the last status change |
-| `reminderCalled` | Boolean | Whether Twilio outbound call was initiated |
-| `reminderResponse` | String | User pressed DTMF code (`"0"`, `"1"`, `"2"`) or `null` |
-| `reminderResponseAt` | Date | Timestamp of the DTMF keypad response |
-| `createdAt` | Date | Record creation timestamp |
-| `updatedAt` | Date | Record modification timestamp |
+#### Verification Success Markers
+* **Key**: `verified_registration:<phone_number>` or `verified_login:<phone_number>`
+* **Value**: `"true"`
+* **TTL**: 600 seconds (10 minutes)
+
+#### Session Tokens
+* **Key**: `session:<session_token_uuid>`
+* **Value**: Owner `userId` (MongoDB User UUID)
+* **TTL**: 86400 seconds (24 hours)
 
 ---
 
-## 2. API Documentation
+## 2. API Endpoints
 
 ### Authentication Endpoints
 
 #### `POST` `/api/auth/register/start`
-Starts phone verification for registration.
+Starts voice verification for a new user registration.
 * **Request**:
   ```json
   { "phone": "+919876543210" }
@@ -65,10 +54,10 @@ Starts phone verification for registration.
   ```json
   { "success": true, "data": { "digit": 5 } }
   ```
-* **Status**: `200 OK` (starts Twilio call) / `400 Bad Request` (already registered / invalid phone)
+* **Status**: `200 OK` (triggers Twilio call) / `400 Bad Request` (phone already registered / invalid format)
 
 #### `POST` `/api/auth/register/complete`
-Creates the user after call verification succeeds.
+Saves user profile into MongoDB after successful call verification.
 * **Request**:
   ```json
   { "phone": "+919876543210", "name": "Deepak" }
@@ -79,7 +68,7 @@ Creates the user after call verification succeeds.
   ```
 
 #### `POST` `/api/auth/login/start`
-Starts verification for logging in.
+Starts verification challenge for an existing registered user.
 * **Request**:
   ```json
   { "phone": "+919876543210" }
@@ -90,7 +79,7 @@ Starts verification for logging in.
   ```
 
 #### `POST` `/api/auth/login/complete`
-Logs the user in after call verification succeeds.
+Authenticates user and returns session token after successful verification.
 * **Request**:
   ```json
   { "phone": "+919876543210" }
@@ -101,112 +90,19 @@ Logs the user in after call verification succeeds.
   ```
 
 #### `GET` `/api/auth/status`
-Checks if phone number is verified (polled by the UI).
+Checks if the verification status for a number is confirmed (polled by the React UI).
 * **Parameters**: `phone=+919876543210`, `mode=register` (or `login`)
 * **Response**:
   ```json
   { "success": true, "data": { "verified": true } }
   ```
 
----
-
-### Routine Template Endpoints
-
-#### `GET` `/api/routines`
-Gets active routine templates.
+#### `POST` `/api/auth/logout-user`
+Deletes user session from Redis.
 * **Headers**: `Authorization: Bearer <session-token>`
-* **Response**:
-  ```json
-  { "success": true, "data": [{ "id": "uuid", "title": "Yoga", "time": "07:00", "isActive": true }] }
-  ```
-
-#### `POST` `/api/routines`
-Creates a routine template pattern.
-* **Headers**: `Authorization: Bearer <session-token>`
-* **Request**:
-  ```json
-  { "title": "Read Paper", "time": "08:30" }
-  ```
-* **Response**:
-  ```json
-  { "success": true, "data": { "id": "uuid", "title": "Read Paper", "time": "08:30", "isActive": true } }
-  ```
-
-#### `PUT` `/api/routines/{id}`
-Updates a routine template.
-* **Headers**: `Authorization: Bearer <session-token>`
-* **Request**:
-  ```json
-  { "title": "Read Paper Longer", "time": "09:00", "isActive": true }
-  ```
 * **Response**:
   ```json
   { "success": true }
-  ```
-
-#### `DELETE` `/api/routines/{id}`
-Soft-deletes a routine template.
-* **Headers**: `Authorization: Bearer <session-token>`
-* **Response**:
-  ```json
-  { "success": true, "message": "Routine template soft-deleted successfully" }
-  ```
-
----
-
-### Routine Tracking Checklist Endpoints
-
-#### `GET` `/api/tracker/today`
-Gets checklist for a target local date. If empty, creates tracks from templates.
-* **Headers**: `Authorization: Bearer <session-token>`
-* **Parameters**: `date=YYYY-MM-DD`
-* **Response**:
-  ```json
-  {
-    "success": true,
-    "data": [
-      {
-        "id": "track-uuid",
-        "routineId": "template-uuid",
-        "date": "2026-07-28",
-        "title": "Yoga",
-        "time": "07:00",
-        "status": "Pending",
-        "statusUpdatedAt": "2026-07-28T13:00:00Z",
-        "reminderCalled": false,
-        "reminderResponse": null,
-        "reminderResponseAt": null,
-        "isMissed": true
-      }
-    ]
-  }
-  ```
-
-#### `PATCH` `/api/tracker/{id}/status`
-Marks item as Completed, Pending, or Will Complete Later.
-* **Headers**: `Authorization: Bearer <session-token>`
-* **Request**:
-  ```json
-  { "status": "Completed" }
-  ```
-* **Response**:
-  ```json
-  { "success": true }
-  ```
-
-#### `GET` `/api/tracker/history`
-Gets historical lists grouped by date (excludes today).
-* **Headers**: `Authorization: Bearer <session-token>`
-* **Response**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "2026-07-27": [
-        { "id": "track-uuid", "routineId": "template-uuid", "title": "Gym", "time": "18:00", "status": "Completed", "isMissed": false }
-      ]
-    }
-  }
   ```
 
 ---
@@ -214,59 +110,44 @@ Gets historical lists grouped by date (excludes today).
 ### Twilio Webhooks
 
 #### `POST` `/api/webhooks/twilio/verification-call`
-TwiML endpoint answering outbound verification call. Gathers DTMF digit input.
+TwiML endpoint that answers the outbound call. Instructs Twilio to speak the challenge and gather the keypad entry.
 * **Parameters**: `phone=+919876543210`
 * **Response**: XML TwiML gather response.
 
 #### `POST` `/api/webhooks/twilio/verify-digit`
-TwiML callback checking if DTMF digit matches Redis OTP cache.
+TwiML callback that verifies if the user-pressed keypad DTMF key matches the Redis cached OTP.
 * **Form Parameters**: `Digits=5`
-* **Response**: XML TwiML hangup.
-
-#### `POST` `/api/webhooks/twilio/reminder-call`
-TwiML webhook answering outbound reminder call. Gathers DTMF code (1, 0, or 2).
-* **Parameters**: `trackId=track-uuid`
-* **Response**: XML TwiML gather response.
-
-#### `POST` `/api/webhooks/twilio/verify-reminder`
-TwiML callback handling DTMF keypress for status update (1 -> Completed, 0 -> Pending, 2 -> Later).
-* **Form Parameters**: `Digits=1`
 * **Response**: XML TwiML hangup.
 
 ---
 
-## 3. Installation & Run Guide
+## 3. Setup and Run Guide
 
 ### Step 1: Set Environment Variables
-Open the `.env` file at the root of the project and populate your Twilio credentials and timezone:
+Create a `.env` file in the project root:
 ```env
 # Twilio Credentials (leave blank to run in MOCK calling mode)
 TWILIO_ACCOUNT_SID=your_twilio_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
-# Timezone (checks local schedules based on this timezone)
-TIMEZONE=Asia/Kolkata
-
-# Public exposed address (e.g. ngrok tunnel)
+# Public exposed address (e.g. ngrok tunnel URL)
 PUBLIC_URL=https://xxxx.ngrok-free.app
 ```
 
-### Step 2: Run via Docker Compose
-Build and run the entire stack:
+### Step 2: Start Container Stack
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
-This starts:
-- MongoDB: `mongodb://localhost:27017`
-- Redis: `redis://localhost:6379`
-- FastAPI Backend: `http://localhost:8000`
-- React Frontend (Vite): `http://localhost:3000` (proxied via Nginx)
-- Nginx Gateway: `http://localhost:3000`
+This deploys:
+* MongoDB: `mongodb://localhost:27017`
+* Redis: `redis://localhost:6379`
+* Backend API: `http://localhost:8000`
+* Frontend App: `http://localhost:3000` (proxied via Nginx gateway)
 
-### Step 3: Connect public URL using ngrok
-To let Twilio connect to your local webhooks, run ngrok on port 3000:
+### Step 3: Run ngrok for webhooks
+To route Twilio webhooks to your local server:
 ```bash
 ngrok http 3000
 ```
-Then copy your ngrok URL (e.g., `https://xxxx.ngrok-free.app`) and paste it as `PUBLIC_URL` in your `.env` file, and restart the backend container or compose.
+Update the `PUBLIC_URL` variable in `.env` with the ngrok URL and restart the containers.

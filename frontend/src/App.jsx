@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
-import { Calendar, History as HistoryIcon, LogOut, CheckSquare } from 'lucide-react';
+import { Calendar, History as HistoryIcon, LogOut, CheckSquare, Clock } from 'lucide-react';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('habitloop_token') || '');
@@ -70,7 +70,7 @@ export default function App() {
   if (appLoading) {
     return (
       <div style={styles.loadingScreen}>
-        <div className="animate-spin" style={styles.spinner}>⏰</div>
+        <Clock size={48} className="animate-spin" style={{ color: 'var(--primary)' }} />
         <p style={{ marginTop: '16px', color: 'var(--text-secondary)' }}>Loading HabitLoop...</p>
       </div>
     );
@@ -86,32 +86,9 @@ export default function App() {
     <div style={styles.appContainer}>
       <header style={styles.navHeader} className="glass-panel">
         <div style={styles.navBrand}>
-          <span style={styles.brandIcon}>⏰</span>
+          <Clock size={20} style={{ color: 'var(--primary)', marginRight: '8px' }} />
           <h1 style={styles.brandName} className="text-gradient">HabitLoop</h1>
         </div>
-
-        <nav style={styles.navLinks}>
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            style={{ 
-              ...styles.navLinkButton, 
-              ...(activeTab === 'dashboard' ? styles.activeNavLink : {}) 
-            }}
-          >
-            <CheckSquare size={16} />
-            <span>Checklist</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('history')}
-            style={{ 
-              ...styles.navLinkButton, 
-              ...(activeTab === 'history' ? styles.activeNavLink : {}) 
-            }}
-          >
-            <HistoryIcon size={16} />
-            <span>History</span>
-          </button>
-        </nav>
 
         <div style={styles.navUser}>
           <span style={styles.userName}>{user.name}</span>
@@ -122,11 +99,7 @@ export default function App() {
       </header>
 
       <main style={styles.mainContent}>
-        {activeTab === 'dashboard' ? (
-          <Dashboard token={token} user={user} onLogout={handleLogout} />
-        ) : (
-          <History token={token} />
-        )}
+        <Dashboard token={token} user={user} onLogout={handleLogout} />
       </main>
     </div>
   );
